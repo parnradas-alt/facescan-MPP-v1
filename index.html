@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบบันทึกเวลาสแกนใบหน้า - บริษัท มัลติโปรพลาส จำกัด</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Padauk:wght@400;700&display=swap" rel="stylesheet">
+  <script src="js/api-config.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Sarabun', 'Padauk', sans-serif;
+      min-height: 100vh;
+      background-color: #f8fafc; /* พื้นหลังสีขาวนวล */
+      color: #334155;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px 60px;
+    }
+    .header { text-align: center; margin-bottom: 35px; }
+    .company-name { 
+      font-size: 1.4rem; 
+      font-weight: 700; 
+      color: #6366f1; 
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .logo-icon { font-size: 3.5rem; margin-bottom: 10px; display: block; }
+    h1 { font-size: 1.8rem; font-weight: 700; color: #1e293b; margin-bottom: 5px; }
+    .subtitle { font-size: 1rem; color: #64748b; font-weight: 400; }
+    
+    .menu-cards {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      width: 100%;
+      max-width: 450px;
+    }
+    
+    .btn-menu {
+      display: flex;
+      align-items: center;
+      padding: 18px 24px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 20px;
+      text-decoration: none;
+      color: #334155;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    }
+    
+    .btn-menu:active { transform: scale(0.97); background: #f1f5f9; }
+    
+    .card-icon { font-size: 2.2rem; margin-right: 20px; width: 50px; text-align: center; }
+    .card-text { flex-grow: 1; }
+    .card-title { font-weight: 700; font-size: 1.1rem; color: #0f172a; }
+    .card-desc { font-size: 0.85rem; color: #64748b; margin-top: 2px; line-height: 1.4; }
+    .card-arrow { font-size: 1.2rem; color: #cbd5e1; }
+
+    /* Indicator Colors */
+    .btn-register { border-left: 5px solid #6366f1; }
+    .btn-in { border-left: 5px solid #10b981; }
+    .btn-break-out { border-left: 5px solid #f59e0b; }
+    .btn-break-in { border-left: 5px solid #06b6d4; }
+    .btn-out { border-left: 5px solid #ef4444; }
+    .btn-leave { border-left: 5px solid #8b5cf6; }
+    .btn-config { border-left: 5px solid #94a3b8; margin-top: 15px; }
+
+    .api-warning {
+      background: #fef2f2;
+      border: 1px solid #fee2e2;
+      color: #dc2626;
+      padding: 14px;
+      border-radius: 15px;
+      margin-bottom: 25px;
+      font-size: 0.9rem;
+      text-align: center;
+      display: none;
+      width: 100%;
+      max-width: 450px;
+    }
+    .api-warning a { color: #dc2626; font-weight: 700; text-decoration: underline; }
+
+    /* Myanmar Text styling */
+    .mm-text { display: block; font-size: 0.8rem; opacity: 0.85; margin-top: 1px; font-weight: 400; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="company-name">บริษัท มัลติโปรพลาส จำกัด</div>
+    <span class="logo-icon">🏢</span>
+    <h1>ระบบบันทึกเวลาเข้างาน</h1>
+    <p class="subtitle">Face Scan & GPS Attendance</p>
+  </div>
+
+  <div id="apiWarning" class="api-warning">
+    ⚠️ ยังไม่ได้ตั้งค่า API — <a href="config.html">ไปตั้งค่าก่อน</a>
+  </div>
+
+  <div class="menu-cards">
+    <!-- ลงทะเบียน -->
+    <a href="register.html" class="btn-menu btn-register">
+      <div class="card-icon">👤</div>
+      <div class="card-text">
+        <div class="card-title">ลงทะเบียนพนักงาน <span class="mm-text">ဝန်ထမ်းမှတ်ပုံတင်ရန်</span></div>
+        <div class="card-desc">บันทึกข้อมูลใบหน้าใหม่ / မျက်နှာအသစ်မှတ်တမ်းတင်ရန်</div>
+      </div>
+      <span class="card-arrow">›</span>
+    </a>
+
+    <!-- สแกนเข้างาน -->
+    <a href="scan.html?type=เข้างาน" class="btn-menu btn-in">
+      <div class="card-icon">☀️</div>
+      <div class="card-text">
+        <div class="card-title">สแกนเข้างาน <span class="mm-text">အလုပ်ဝင်ရန် စကင်န်ဖတ်ရန်</span></div>
+        <div class="card-desc">เริ่มปฏิบัติงาน / အလုပ်စတင်ရန်</div>
+      </div>
+      <span class="card-arrow">›</span>
+    </a>
+
+    <!-- พักเบรก (ออก) -->
+    <a href="scan.html?type=พักออก" class="btn-menu btn-break-out">
+      <div class="card-icon">☕</div>
+      <div class="card-text">
+        <div class="card-title">สแกนพักเบรก (ออก) <span class="mm-text">နားချိန်သွားရန် (အထွက်)</span></div>
+        <div class="card-desc">เริ่มเวลาพัก / နားချိန်စတင်ရန်</div>
+      </div>
+      <span class="card-arrow">›</span>
+    </a>
+
+    <!-- พักเบรก (เข้า) -->
+    <a href="scan.html?type=พักเข้า" class="btn-menu btn-break-in">
+      <div class="card-icon">🍱</div>
+      <div class="card-text">
+        <div class="card-title">สแกนพักเบรก (เข้า) <span class="mm-text">နားချိန်ပြီးပြန်ဝင်ရန် (အဝင်)</span></div>
+        <div class="card-desc">กลับจากพัก / နားချိန်မှပြန်လာရန်</div>
+      </div>
+      <span class="card-arrow">›</span>
+    </a>
+
+    <!-- สแกนออกงาน -->
+    <a href="scan.html?type=ออกงาน" class="btn-menu btn-out">
+      <div class="card-icon">🌙</div>
+      <div class="card-text">
+        <div class="card-title">สแกนออกงาน <span class="mm-text">အလုပ်ဆင်းရန် စကင်န်ဖတ်ရန်</span></div>
+        <div class="card-desc">เลิกงาน / အလုပ်ဆင်းရန်</div>
+      </div>
+      <span class="card-arrow">›</span>
+    </a>
+
+    <!-- แจ้งลา -->
+    <a href="leave.html" class="btn-menu btn-leave">
+      <div class="card-icon">📄</div>
+      <div class="card-text">
+        <div class="card-title">แจ้งลาหยุด <span class="mm-text">ခွင့်တိုင်ကြားရန်</span></div>
+        <div class="card-desc">ส่งใบลาออนไลน์ / အွန်လိုင်းမှခွင့်တိုင်ရန်</div>
+      </div>
+      <span class="card-arrow">›</span>
+    </a>
+
+    <!-- ตั้งค่า -->
+    <a href="config.html" class="btn-menu btn-config">
+      <div class="card-icon">⚙️</div>
+      <div class="card-text">
+        <div class="card-title">ตั้งค่าระบบ <span class="mm-text">စနစ်ဆက်တင်များ</span></div>
+        <div class="card-desc">GPS & API Config</div>
+      </div>
+      <span class="card-arrow">›</span>
+    </a>
+  </div>
+
+  <script>
+    window.onload = () => {
+      const storedUrl = localStorage.getItem('gasApiUrl');
+      if (!storedUrl && (!GAS_API_URL || GAS_API_URL === '')) {
+        document.getElementById('apiWarning').style.display = 'block';
+      }
+    };
+  </script>
+</body>
+</html>

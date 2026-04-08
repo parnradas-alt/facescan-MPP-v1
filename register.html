@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ลงทะเบียน / မှတ်ပုံတင်ရန်</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Noto+Sans+Myanmar:wght@300;400;700&display=swap" rel="stylesheet">
+  <script src="js/api-config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.js"></script>
+  <style>
+    :root {
+      --primary: #1e40af;
+      --bg: #f8fafc;
+      --text: #1e293b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Sarabun', 'Noto Sans Myanmar', sans-serif;
+      background-color: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px 20px;
+    }
+    .header { text-align: center; margin-bottom: 25px; }
+    .header h2 { color: var(--primary); }
+    
+    .card {
+      background: white;
+      padding: 25px;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 20px;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      font-family: inherit;
+      outline: none;
+    }
+    input:focus { border-color: var(--primary); }
+
+    .video-preview {
+      width: 100%;
+      border-radius: 15px;
+      margin-bottom: 20px;
+      background: #000;
+      overflow: hidden;
+    }
+    video { width: 100%; display: block; }
+
+    .btn-reg {
+      width: 100%;
+      padding: 15px;
+      border-radius: 15px;
+      border: none;
+      background: var(--primary);
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-reg:disabled { background: #cbd5e1; }
+    .mm { font-family: 'Noto Sans Myanmar', sans-serif; display: block; font-size: 0.8rem; font-weight: normal; }
+    .back-link { margin-top: 20px; color: #64748b; text-decoration: none; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h2>ลงทะเบียนใบหน้าใหม่</h2>
+    <div class="mm">မျက်နှာအသစ် မှတ်ပုံတင်ရန်</div>
+  </div>
+
+  <div class="card">
+    <label style="display:block; margin-bottom:8px; font-weight:600;">ชื่อ-นามสกุล / အမည်</label>
+    <input type="text" id="empName" placeholder="ใส่ชื่อพนักงาน...">
+    
+    <div class="video-preview">
+      <video id="video" autoplay muted playsinline></video>
+    </div>
+
+    <button id="btnSave" class="btn-reg" onclick="register()">
+      <span>📷 บันทึกข้อมูลใบหน้า</span>
+      <span class="mm">မျက်နှာအချက်အလက်ကို သိမ်းဆည်းပါ</span>
+    </button>
+  </div>
+
+  <a href="index.html" class="back-link">⬅️ กลับหน้าหลัก / ပင်မစာမျက်နှา</a>
+
+  <script>
+    async function init() {
+      await Promise.all([
+        faceapi.nets.ssdMobilenetv1.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model'),
+        faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model'),
+        faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model')
+      ]);
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      document.getElementById('video').srcObject = stream;
+    }
+
+    async function register() {
+      const name = document.getElementById('empName').value;
+      if (!name) return alert("กรุณาใส่ชื่อ / နာမည်ထည့်ပါ");
+
+      const btn = document.getElementById('btnSave');
+      btn.disabled = true;
+      btn.innerText = "กำลังประมวลผล...";
+
+      const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
+      if (!detection) {
+        alert("ไม่พบใบหน้า / မျက်နှာကို မတွေ့ပါ");
+        btn.disabled = false;
+        return;
+      }
+
+      const payload = {
+        action: 'registerUser',
+        name: name,
+        faceDescriptor: Array.from(detection.descriptor)
+      };
+
+      try {
+        const res = await fetch(GAS_API_URL, {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        alert(data.message);
+        window.location.href = 'index.html';
+      } catch (e) {
+        alert("Error: " + e.message);
+        btn.disabled = false;
+      }
+    }
+    init();
+  </script>
+</body>
+</html>

@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>สแกนใบหน้าบันทึกเวลา - บริษัท มัลติโปรพลาส จำกัด</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Padauk:wght@400;700&display=swap" rel="stylesheet">
+  <script src="js/api-config.js"></script>
+  <!-- ใช้ CDN ที่เสถียรสำหรับ face-api.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Sarabun', 'Padauk', sans-serif;
+      min-height: 100vh;
+      background-color: #f8fafc;
+      color: #334155;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 50px;
+    }
+    .header { text-align: center; margin-bottom: 20px; }
+    .company-name { font-size: 1.1rem; font-weight: 700; color: #6366f1; margin-bottom: 5px; }
+    #scanTypeTitle { font-size: 1.5rem; color: #1e293b; font-weight: 700; }
+    
+    .video-container {
+      position: relative;
+      width: 100%;
+      max-width: 400px;
+      aspect-ratio: 3/4;
+      background: #000;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      border: 4px solid white;
+    }
+    video { width: 100%; height: 100%; object-fit: cover; }
+    
+    .scan-overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      pointer-events: none;
+    }
+    .face-guide {
+      width: 70%; height: 60%;
+      border: 2px dashed rgba(255,255,255,0.5);
+      border-radius: 50% / 45%;
+    }
+    
+    .btn-start {
+      margin-top: 30px;
+      padding: 16px 45px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      background: #6366f1;
+      color: white;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
+      transition: all 0.3s;
+    }
+    .btn-start:disabled { background: #cbd5e1; cursor: not-allowed; }
+
+    /* Error Message Area */
+    #errorMessage {
+      margin-top: 15px;
+      padding: 10px 20px;
+      background: #fef2f2;
+      border: 1px solid #fee2e2;
+      color: #dc2626;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      display: none;
+      max-width: 400px;
+      text-align: center;
+    }
+
+    /* Modal */
+    .modal {
+      display: none; position: fixed; top:0; left:0; width:100%; height:100%;
+      background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .modal-content {
+      background: white; padding: 30px; border-radius: 24px;
+      width: 100%; max-width: 350px; text-align: center;
+    }
+    .btn-confirm {
+      width: 100%; padding: 14px; margin-top: 20px;
+      background: #10b981; border-radius: 12px; border: none; color: white;
+      font-weight: 600; font-size: 1rem; cursor: pointer;
+    }
+    .btn-cancel {
+      width: 100%; padding: 12px; margin-top: 10px;
+      background: transparent; color: #64748b; border: none; font-size: 0.9rem;
+    }
+    .mm-text { font-size: 0.85rem; opacity: 0.8; display: block; margin-top: 2px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="company-name">บริษัท มัลติโปรพลาส จำกัด</div>
+    <h2 id="scanTypeTitle">สแกนใบหน้า</h2>
+    <p id="mainStatus">⏳ กำลังเตรียมระบบ...</p>
+  </div>
+
+  <div id="errorMessage"></div>
+
+  <div class="video-container">
+    <video id="video" autoplay muted playsinline></video>
+    <div class="scan-overlay">
+      <div class="face-guide"></div>
+      <div id="overlayStatus" style="margin-top: 20px; background: rgba(0,0,0,0.6); color: white; padding: 5px 15px; border-radius: 20px; font-size: 0.8rem;">
+        พร้อมเริ่มสแกน
+      </div>
+    </div>
+  </div>
+
+  <button id="btnStart" class="btn-start">เริ่มการสแกน <br><span style="font-size: 0.8rem; font-weight: normal;">စကင်န်ဖတ်ခြင်းကို စတင်ပါ</span></button>
+  <a href="index.html" style="margin-top: 20px; color: #64748b; text-decoration: none; font-size: 0.9rem;">🔙 กลับหน้าหลัก</a>
+
+  <div id="confirmModal" class="modal">
+    <div class="modal-content">
+      <p style="color: #64748b; font-size: 0.9rem;">พบรายชื่อพนักงาน</p>
+      <h3 id="detectedName" style="font-size: 1.5rem; margin: 10px 0;">...</h3>
+      <p id="attendanceLabel" style="font-weight: 600; color: #1e293b;"></p>
+      <div id="locationInfo" style="font-size: 0.8rem; margin: 15px 0;">📍 กำลังตรวจสอบ GPS...</div>
+      <button id="btnSubmit" class="btn-confirm">✅ ยืนยันบันทึกเวลา</button>
+      <button class="btn-cancel" onclick="location.reload()">ยกเลิก (พยายามใหม่)</button>
+    </div>
+  </div>
+
+  <script>
+    const MATCH_THRESHOLD = 0.45;
+    const API_URL = localStorage.getItem('gasApiUrl') || GAS_API_URL;
+    const urlParams = new URLSearchParams(window.location.search);
+    const SCAN_TYPE = urlParams.get('type') || 'เข้างาน';
+
+    const video = document.getElementById('video');
+    const btnStart = document.getElementById('btnStart');
+    const mainStatus = document.getElementById('mainStatus');
+    const errDiv = document.getElementById('errorMessage');
+    
+    let faceMatcher = null;
+    let config = null;
+
+    document.getElementById('scanTypeTitle').innerText = 'สแกน' + SCAN_TYPE;
+    document.getElementById('attendanceLabel').innerText = 'ยืนยันการ "' + SCAN_TYPE + '" ใช่หรือไม่?';
+
+    async function init() {
+      try {
+        if (!API_URL) throw new Error('ไม่พบ API URL กรุณาตั้งค่าระบบก่อน');
+        
+        mainStatus.innerText = '⚙️ กำลังโหลด AI Models...';
+        // ใช้ Model จาก CDN ที่ระบุ Path ชัดเจน
+        const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+        await Promise.all([
+          faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmarks68Net.loadFromUri(MODEL_URL),
+          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+        ]);
+
+        mainStatus.innerText = '📡 กำลังเชื่อมต่อข้อมูลพนักงาน...';
+        const [faceRes, configRes] = await Promise.all([
+          fetch(API_URL + '?action=getKnownFaces').then(r => r.json()),
+          fetch(API_URL + '?action=getConfig').then(r => r.json())
+        ]);
+
+        config = configRes;
+        
+        if (faceRes.users && faceRes.users.length > 0) {
+          const labeledDescriptors = faceRes.users.map(u => 
+            new faceapi.LabeledFaceDescriptors(u.name, [new Float32Array(u.descriptor)])
+          );
+          faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, MATCH_THRESHOLD);
+          mainStatus.innerText = '✅ ระบบพร้อมทำงาน';
+          mainStatus.style.color = '#10b981';
+        } else {
+          throw new Error('ไม่พบข้อมูลพนักงานในระบบ กรุณาลงทะเบียนก่อน');
+        }
+      } catch (e) {
+        showError(e.message);
+        btnStart.disabled = true;
+      }
+    }
+
+    btnStart.onclick = async () => {
+      errDiv.style.display = 'none';
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } 
+        });
+        video.srcObject = stream;
+        btnStart.style.display = 'none';
+        startScanning();
+      } catch (e) {
+        showError('ไม่สามารถเปิดกล้องได้: ' + (e.name === 'NotAllowedError' ? 'คุณปฏิเสธการเข้าถึงกล้อง' : e.message));
+      }
+    };
+
+    async function startScanning() {
+      document.getElementById('overlayStatus').innerText = '🔍 กำลังค้นหาใบหน้า...';
+      const scanLoop = async () => {
+        if (video.paused || video.ended) return;
+        
+        const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
+        
+        if (detection) {
+          const match = faceMatcher.findBestMatch(detection.descriptor);
+          if (match.label !== 'unknown') {
+            document.getElementById('detectedName').innerText = match.label;
+            showConfirm(match.label);
+            return; // หยุดสแกนเมื่อพบ
+          } else {
+            document.getElementById('overlayStatus').innerText = '❌ ไม่พบรายชื่อพนักงาน';
+          }
+        }
+        setTimeout(scanLoop, 500);
+      };
+      scanLoop();
+    }
+
+    function showConfirm(name) {
+      document.getElementById('confirmModal').style.display = 'flex';
+      checkLocation();
+    }
+
+    function checkLocation() {
+      if (!navigator.geolocation) {
+        updateLocationStatus('❌ Browser ไม่รองรับ GPS', '#dc2626', true);
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          const dist = haversineKm(lat, lng, config.lat, config.lng);
+          
+          if (config.radius === 0 || dist <= config.radius) {
+            updateLocationStatus('✅ อยู่ในพื้นที่ปฏิบัติงาน', '#10b981', false);
+            document.getElementById('btnSubmit').onclick = () => finalSubmit(name, lat, lng);
+          } else {
+            updateLocationStatus('❌ นอกพื้นที่พิกัด (' + dist.toFixed(2) + ' กม.)', '#dc2626', true);
+          }
+        },
+        err => {
+          updateLocationStatus('❌ GPS Error: ' + err.message, '#dc2626', config.radius > 0);
+        },
+        { enableHighAccuracy: true }
+      );
+    }
+
+    async function finalSubmit(name, lat, lng) {
+      const btn = document.getElementById('btnSubmit');
+      btn.disabled = true;
+      btn.innerText = '⏳ กำลังบันทึก...';
+
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'logAttendance',
+            name: document.getElementById('detectedName').innerText,
+            lat, lng, type: SCAN_TYPE
+          })
+        });
+        const data = await res.json();
+        alert('✅ บันทึก' + SCAN_TYPE + 'สำเร็จ');
+        window.location.href = 'index.html';
+      } catch (e) {
+        alert('❌ บันทึกล้มเหลว: ' + e.message);
+        btn.disabled = false;
+      }
+    }
+
+    function updateLocationStatus(msg, color, block) {
+      const info = document.getElementById('locationInfo');
+      info.innerText = msg;
+      info.style.color = color;
+      document.getElementById('btnSubmit').disabled = block;
+    }
+
+    function haversineKm(lat1, lon1, lat2, lon2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    function showError(msg) {
+      errDiv.innerText = msg;
+      errDiv.style.display = 'block';
+      mainStatus.innerText = '❌ เกิดข้อผิดพลาด';
+      mainStatus.style.color = '#dc2626';
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>
